@@ -29,7 +29,10 @@ import ast
 def factories():
     try:
         fac = LLMFactoriesService.get_all()
-        return get_json_result(data=[f.to_dict() for f in fac if f.name not in ["Youdao", "FastEmbed", "BAAI"]])
+        # return get_json_result(data=[f.to_dict() for f in fac if f.name not in ["Youdao", "FastEmbed", "BAAI"]])
+        return get_json_result(data=[f.to_dict() for f in fac if f.name not in 
+            ["Youdao", "FastEmbed", "BAAI", "Moonshot", "ZHIPU-AI", "Xinference", "BaiChuan", "cohere", "DeepSeek", "Groq", 
+             "Jina", "Lepton", "LocalAI", "MiniMax", "OpenAI-API-Compatible", "OpenRouter", "StepFun", "VolcEngine", "Tongyi-Qianwen"]])
     except Exception as e:
         return server_error_response(e)
 
@@ -58,7 +61,12 @@ def set_api_key():
             mdl = ChatModel[factory](
                 req["api_key"], llm.llm_name, base_url=req.get("base_url"))
             try:
-                m, tc = mdl.chat(None, [{"role": "user", "content": "Hello! How are you doing!"}], 
+                content= [
+                    {
+                        "text": "Hello! How are you doing!"  
+                    }
+                ]
+                m, tc = mdl.chat(None, [{"role": "user", "content": content}], 
                                  {"temperature": 0.9,'max_tokens':50})
                 if m.find("**ERROR**") >=0:
                     raise Exception(m)
@@ -165,7 +173,12 @@ def add_llm():
             base_url=llm["api_base"]
         )
         try:
-            m, tc = mdl.chat(None, [{"role": "user", "content": "Hello! How are you doing!"}], {
+            content= [
+                {
+                    "text": "Hello! How are you doing!"  
+                }
+            ]
+            m, tc = mdl.chat(None, [{"role": "user", "content": content}], {
                              "temperature": 0.9})
             if not tc:
                 raise Exception(m)
