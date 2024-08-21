@@ -622,6 +622,7 @@ class NvidiaCV(Base):
             }
         ]
 
+
 class StepFunCV(GptV4):
     def __init__(self, key, model_name="step-1v-8k", lang="Chinese", base_url="https://api.stepfun.com/v1"):
         if not base_url: base_url="https://api.stepfun.com/v1"
@@ -629,8 +630,9 @@ class StepFunCV(GptV4):
         self.model_name = model_name
         self.lang = lang
 
+
 class LmStudioCV(GptV4):
-    def __init__(self, key, model_name, base_url, lang="Chinese"):
+    def __init__(self, key, model_name, lang="Chinese", base_url=""):
         if not base_url:
             raise ValueError("Local llm url cannot be None")
         if base_url.split("/")[-1] != "v1":
@@ -641,7 +643,7 @@ class LmStudioCV(GptV4):
 
 
 class OpenAI_APICV(GptV4):
-    def __init__(self, key, model_name, base_url, lang="Chinese"):
+    def __init__(self, key, model_name, lang="Chinese", base_url=""):
         if not base_url:
             raise ValueError("url cannot be None")
         if base_url.split("/")[-1] != "v1":
@@ -649,3 +651,69 @@ class OpenAI_APICV(GptV4):
         self.client = OpenAI(api_key=key, base_url=base_url)
         self.model_name = model_name.split("___")[0]
         self.lang = lang
+
+
+class TogetherAICV(GptV4):
+    def __init__(self, key, model_name, lang="Chinese", base_url="https://api.together.xyz/v1"):
+        if not base_url:
+            base_url = "https://api.together.xyz/v1"
+        super().__init__(key, model_name,lang,base_url)
+
+
+class YiCV(GptV4):
+    def __init__(self, key, model_name, lang="Chinese",base_url="https://api.lingyiwanwu.com/v1",):
+        if not base_url:
+            base_url = "https://api.lingyiwanwu.com/v1"
+        super().__init__(key, model_name,lang,base_url)
+
+
+class HunyuanCV(Base):
+    def __init__(self, key, model_name, lang="Chinese",base_url=None):
+        from tencentcloud.common import credential
+        from tencentcloud.hunyuan.v20230901 import hunyuan_client
+
+        key = json.loads(key)
+        sid = key.get("hunyuan_sid", "")
+        sk = key.get("hunyuan_sk", "")
+        cred = credential.Credential(sid, sk)
+        self.model_name = model_name
+        self.client = hunyuan_client.HunyuanClient(cred, "")
+        self.lang = lang
+
+    def describe(self, image, max_tokens=4096):
+        from tencentcloud.hunyuan.v20230901 import models
+        from tencentcloud.common.exception.tencent_cloud_sdk_exception import (
+            TencentCloudSDKException,
+        )
+        
+        b64 = self.image2base64(image)
+        req = models.ChatCompletionsRequest()
+        params = {"Model": self.model_name, "Messages": self.prompt(b64)}
+        req.from_json_string(json.dumps(params))
+        ans = ""
+        try:
+            response = self.client.ChatCompletions(req)
+            ans = response.Choices[0].Message.Content
+            return ans, response.Usage.TotalTokens
+        except TencentCloudSDKException as e:
+            return ans + "\n**ERROR**: " + str(e), 0
+        
+    def prompt(self, b64):
+        return [
+            {
+                "Role": "user",
+                "Contents": [
+                    {
+                        "Type": "image_url",
+                        "ImageUrl": {
+                            "Url": f"data:image/jpeg;base64,{b64}"
+                        },
+                    },
+                    {
+                        "Type": "text",
+                        "Text": "请用中文详细描述一下图中的内容，比如时间，地点，人物，事情，人物心情等，如果有数据请提取出数据。" if self.lang.lower() == "chinese" else
+                        "Please describe the content of this picture, like where, when, who, what happen. If it has number data, please extract them out.",
+                    },
+                ],
+            }
+        ]

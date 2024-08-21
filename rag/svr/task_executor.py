@@ -23,6 +23,7 @@ import re
 import sys
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 from api.db.services.file2document_service import File2DocumentService
@@ -146,27 +147,32 @@ def build(row):
         binary = get_minio_binary(bucket, name)
         cron_logger.info(
             "From minio({}) {}/{}".format(timer() - st, row["location"], row["name"]))
+    except TimeoutError as e:
+        callback(-1, f"Internal server error: Fetch file from minio timeout. Could you try it again.")
+        cron_logger.error(
+            "Minio {}/{}: Fetch file from minio timeout.".format(row["location"], row["name"]))
+        return
+    except Exception as e:
+        if re.search("(No such file|not found)", str(e)):
+            callback(-1, "Can not find file <%s> from minio. Could you try it again?" % row["name"])
+        else:
+            callback(-1, f"Get file from minio: %s" %
+                     str(e).replace("'", ""))
+        traceback.print_exc()
+        return
+
+    try:
         cks = chunker.chunk(row["name"], binary=binary, from_page=row["from_page"],
                             to_page=row["to_page"], lang=row["language"], callback=callback,
                             kb_id=row["kb_id"], parser_config=row["parser_config"], tenant_id=row["tenant_id"])
         cron_logger.info(
-            "Chunkking({}) {}/{}".format(timer() - st, row["location"], row["name"]))
-    except TimeoutError as e:
-        callback(-1, f"Internal server error: Fetch file timeout. Could you try it again.")
-        cron_logger.error(
-            "Chunkking {}/{}: Fetch file timeout.".format(row["location"], row["name"]))
-        return
+            "Chunking({}) {}/{}".format(timer() - st, row["location"], row["name"]))
     except Exception as e:
-        if re.search("(No such file|not found)", str(e)):
-            callback(-1, "Can not find file <%s>" % row["name"])
-        else:
-            callback(-1, f"Internal server error: %s" %
+        callback(-1, f"Internal server error while chunking: %s" %
                      str(e).replace("'", ""))
-        traceback.print_exc()
-
         cron_logger.error(
-            "Chunkking {}/{}: {}".format(row["location"], row["name"], str(e)))
-
+            "Chunking {}/{}: {}".format(row["location"], row["name"], str(e)))
+        traceback.print_exc()
         return
 
     docs = []
@@ -343,7 +349,7 @@ def main():
         chunk_count = len(set([c["_id"] for c in cks]))
         st = timer()
         es_r = ""
-        es_bulk_size = 16
+        es_bulk_size = 4
         for b in range(0, len(cks), es_bulk_size):
             es_r = ELASTICSEARCH.bulk(cks[b:b + es_bulk_size], search.index_name(r["tenant_id"]))
             if b % 128 == 0:
@@ -368,11 +374,28 @@ def main():
                     r["id"], tk_count, len(cks), timer() - st))
 
 
+def report_status():
+    id = "0" if len(sys.argv) < 2 else sys.argv[1]
+    while True:
+        try:
+            obj = REDIS_CONN.get("TASKEXE")
+            obj = json.load(obj)
+            if id not in obj: obj[id] = []
+            obj[id].append(timer()*1000)
+            obj[id] = obj[id][:-60]
+            REDIS_CONN.set_obj("TASKEXE", obj)
+        except Exception as e:
+            print("[Exception]:", str(e))
+        time.sleep(60)
+
 if __name__ == "__main__":
     peewee_logger = logging.getLogger('peewee')
     peewee_logger.propagate = False
     peewee_logger.addHandler(database_logger.handlers[0])
     peewee_logger.setLevel(database_logger.level)
+
+    exe = ThreadPoolExecutor(max_workers=1)
+    exe.submit(report_status)
 
     while True:
         main()

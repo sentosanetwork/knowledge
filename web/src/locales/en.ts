@@ -149,6 +149,7 @@ export default {
       rerankTip: `If it's empty. It uses embeddings of query and chunks to compuste vector cosine similarity. Otherwise, it uses rerank score in place of  vector cosine similarity.`,
       topK: 'Top-K',
       topKTip: `K chunks will be fed into rerank models.`,
+      delimiter: `Delimiter`,
     },
     knowledgeConfiguration: {
       titleDescription:
@@ -200,7 +201,7 @@ export default {
       We assume manual has hierarchical section structure. We use the lowest section titles as pivots to slice documents.
       So, the figures and tables in the same section will not be sliced apart, and chunk size might be large.
       </p>`,
-      naive: `<p>Supported file formats are <b>DOCX, EXCEL, PPT, IMAGE, PDF, TXT</b>.</p>
+      naive: `<p>Supported file formats are <b>DOCX, EXCEL, PPT, IMAGE, PDF, TXT, MD, JSON, EML</b>.</p>
       <p>This method apply the naive ways to chunk files: </p>
       <p>
       <li>Successive text will be sliced into pieces using vision detection model.</li>
@@ -272,6 +273,13 @@ export default {
     </p><p>
     If you want to summarize something that needs all the context of an article and the selected LLM's context length covers the document length, you can try this method.
     </p>`,
+      knowledgeGraph: `<p>Supported file formats are <b>DOCX, EXCEL, PPT, IMAGE, PDF, TXT, MD, JSON, EML</b>
+
+<p>After files being chunked, it uses chunks to extract knowledge graph and mind map of the entire document. This method apply the naive ways to chunk files:
+Successive text will be sliced into pieces each of which is around 512 token number.</p>
+<p>Next, chunks will be transmited to LLM to extract nodes and relationships of a knowledge graph, and a mind map.</p>
+
+Mind the entiry type you need to specify.</p>`,
       useRaptor: 'Use RAPTOR to enhance retrieval',
       useRaptorTip:
         'Recursive Abstractive Processing for Tree-Organized Retrieval, please refer to https://huggingface.co/papers/2401.18059',
@@ -400,7 +408,7 @@ The above is the content you need to summarize.`,
       preview: 'Preview',
       embedded: 'Embedded',
       serviceApiEndpoint: 'Service API Endpoint',
-      apiKey: 'Api Key',
+      apiKey: 'API Key',
       apiReference: 'API Documents',
       dateRange: 'Date Range:',
       backendServiceApi: 'Backend service API',
@@ -416,6 +424,9 @@ The above is the content you need to summarize.`,
       extensionTitle: 'Chrome Extension',
       tokenError: 'Please create API Token first!',
       searching: 'searching...',
+      parsing: 'Parsing',
+      uploading: 'Uploading',
+      uploadFailed: 'Upload failed',
     },
     setting: {
       profile: 'Profile',
@@ -512,6 +523,13 @@ The above is the content you need to summarize.`,
       'eu-central-1': 'Europe (Frankfurt)',
       'us-gov-west-1': 'AWS GovCloud (US-West)',
       'ap-southeast-2': 'Asia Pacific (Sydney)',
+      addHunyuanSID: 'Hunyuan Secret ID',
+      HunyuanSIDMessage: 'Please input your Secret ID',
+      addHunyuanSK: 'Hunyuan Secret Key',
+      HunyuanSKMessage: 'Please input your Secret Key',
+      SparkModelNameMessage: 'Please select Spark model',
+      addSparkAPIPassword: 'Spark APIPassword',
+      SparkAPIPasswordMessage: 'please input your APIPassword',
     },
     message: {
       registered: 'Registered!',
@@ -582,10 +600,12 @@ The above is the content you need to summarize.`,
       messageMsg: 'Please input message or delete this field.',
       addField: 'Add field',
       loop: 'Loop',
+      loopTip:
+        'Loop is the upper limit of the number of loops of the current component, when the number of loops exceeds the value of loop, it means that the component can not complete the current task, please re-optimize agent',
       yes: 'Yes',
       no: 'No',
       key: 'key',
-      componentId: 'component id',
+      componentId: 'Component ID',
       add: 'Add',
       operation: 'operation',
       run: 'Run',
@@ -619,6 +639,7 @@ The above is the content you need to summarize.`,
       blank: 'Blank',
       createFromNothing: 'Create from nothing',
       addItem: 'Add Item',
+      addSubItem: 'Add Sub Item',
       nameRequiredMsg: 'Name is required',
       nameRepeatedMsg: 'The name cannot be repeated',
       keywordExtract: 'Keyword',
@@ -653,7 +674,7 @@ The above is the content you need to summarize.`,
       bing: 'Bing',
       bingTip:
         'This component is used to get search result from https://www.bing.com/. Typically, it performs as a supplement to knowledgebases. Top N and Bing Subscription-Key specifies the number of search results you need to adapt.',
-      apiKey: 'Api Key',
+      apiKey: 'API Key',
       country: 'Country',
       language: 'Language',
       googleScholar: 'Google Scholar',
@@ -785,7 +806,38 @@ The above is the content you need to summarize.`,
         '15d': '12 days',
         '30d': '30 days',
       },
-      publish: 'Publish',
+      publish: 'API',
+      exeSQL: 'ExeSQL',
+      exeSQLDescription:
+        'The component queries the results from the corresponding relational database via SQL statements. Supports MySQL, PostgreSQL, MariaDB. ',
+      dbType: 'Database Type',
+      database: 'Database',
+      username: 'Username',
+      host: 'Host',
+      port: 'Port',
+      password: 'Password',
+      switch: 'Switch',
+      logicalOperator: 'Logical operator',
+      switchOperatorOptions: {
+        equal: 'equal',
+        notEqual: 'notEqual',
+        gt: 'Greater than',
+        ge: 'Greater equal',
+        lt: 'Less than',
+        le: 'Less equal',
+        contains: 'Contains',
+        notContains: 'Not contains',
+        startWith: 'Start with',
+        endWith: 'End with',
+        empty: 'Empty',
+        notEmpty: 'Not empty',
+      },
+      switchLogicOperatorOptions: {
+        and: 'And',
+        or: 'Or',
+      },
+      operator: 'Operator',
+      value: 'Value',
     },
     footer: {
       profile: 'All rights reserved @ React',

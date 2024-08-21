@@ -38,7 +38,12 @@ EmbeddingModel = {
     "NVIDIA": NvidiaEmbed,
     "LM-Studio": LmStudioEmbed,
     "OpenAI-API-Compatible": OpenAI_APIEmbed,
-    "cohere": CoHereEmbed
+    "cohere": CoHereEmbed,
+    "TogetherAI": TogetherAIEmbed,
+    "PerfXCloud": PerfXCloudEmbed,
+    "Upstage": UpstageEmbed,
+    "SILICONFLOW": SILICONFLOWEmbed,
+    "Replicate": ReplicateEmbed
 }
 
 
@@ -56,7 +61,10 @@ CvModel = {
     "NVIDIA": NvidiaCV,
     "LM-Studio": LmStudioCV,
     "StepFun":StepFunCV,
-    "OpenAI-API-Compatible": OpenAI_APICV
+    "OpenAI-API-Compatible": OpenAI_APICV,
+    "TogetherAI": TogetherAICV,
+    "01.AI": YiCV,
+    "Tencent Hunyuan": HunyuanCV
 }
 
 
@@ -84,7 +92,16 @@ ChatModel = {
     "LM-Studio": LmStudioChat,
     "OpenAI-API-Compatible": OpenAI_APIChat,
     "cohere": CoHereChat,
-    "LeptonAI": LeptonAIChat
+    "LeptonAI": LeptonAIChat,
+    "TogetherAI": TogetherAIChat,
+    "PerfXCloud": PerfXCloudChat,
+    "Upstage":UpstageChat,
+    "novita.ai": NovitaAIChat,
+    "SILICONFLOW": SILICONFLOWChat,
+    "01.AI": YiChat,
+    "Replicate": ReplicateChat,
+    "Tencent Hunyuan": HunyuanChat,
+    "XunFei Spark": SparkChat
 }
 
 
@@ -96,7 +113,9 @@ RerankModel = {
     "NVIDIA": NvidiaRerank,
     "LM-Studio": LmStudioRerank,
     "OpenAI-API-Compatible": OpenAI_APIRerank,
-    "cohere": CoHereRerank
+    "cohere": CoHereRerank,
+    "TogetherAI": TogetherAIRerank,
+    "SILICONFLOW": SILICONFLOWRerank
 }
 
 

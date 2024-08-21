@@ -678,6 +678,10 @@ class BedrockChat(Base):
         if "top_p" in gen_conf:
             gen_conf["topP"] = gen_conf["top_p"]
             _ = gen_conf.pop("top_p")
+        for item in history:
+            if not isinstance(item["content"],list) and not isinstance(item["content"],tuple):
+                item["content"] = [{"text":item["content"]}]
+            
 
         try:
             # Send the message to the model, using a basic inference configuration.
@@ -707,7 +711,10 @@ class BedrockChat(Base):
         if "top_p" in gen_conf:
             gen_conf["topP"] = gen_conf["top_p"]
             _ = gen_conf.pop("top_p")
-
+        for item in history:
+            if not isinstance(item["content"],list) and not isinstance(item["content"],tuple):
+                item["content"] = [{"text":item["content"]}]
+                
         if self.model_name.split('.')[0] == 'ai21':
             try:
                 response = self.client.converse(
@@ -988,3 +995,193 @@ class LeptonAIChat(Base):
         if not base_url:
             base_url = os.path.join("https://"+model_name+".lepton.run","api","v1")
         super().__init__(key, model_name, base_url)
+
+
+class TogetherAIChat(Base):
+    def __init__(self, key, model_name, base_url="https://api.together.xyz/v1"):
+        if not base_url:
+            base_url = "https://api.together.xyz/v1"
+        super().__init__(key, model_name, base_url)
+
+
+class PerfXCloudChat(Base):
+    def __init__(self, key, model_name, base_url="https://cloud.perfxlab.cn/v1"):
+        if not base_url:
+            base_url = "https://cloud.perfxlab.cn/v1"
+        super().__init__(key, model_name, base_url)
+
+
+class UpstageChat(Base):
+    def __init__(self, key, model_name, base_url="https://api.upstage.ai/v1/solar"):
+        if not base_url:
+            base_url = "https://api.upstage.ai/v1/solar"
+        super().__init__(key, model_name, base_url)
+
+
+class NovitaAIChat(Base):
+    def __init__(self, key, model_name, base_url="https://api.novita.ai/v3/openai"):
+        if not base_url:
+            base_url = "https://api.novita.ai/v3/openai"
+        super().__init__(key, model_name, base_url)
+
+
+class SILICONFLOWChat(Base):
+    def __init__(self, key, model_name, base_url="https://api.siliconflow.cn/v1"):
+        if not base_url:
+            base_url = "https://api.siliconflow.cn/v1"
+        super().__init__(key, model_name, base_url)
+
+
+class YiChat(Base):
+    def __init__(self, key, model_name, base_url="https://api.01.ai/v1"):
+        if not base_url:
+            base_url = "https://api.01.ai/v1"
+        super().__init__(key, model_name, base_url)
+
+
+class ReplicateChat(Base):
+    def __init__(self, key, model_name, base_url=None):
+        from replicate.client import Client
+
+        self.model_name = model_name
+        self.client = Client(api_token=key)
+        self.system = ""
+
+    def chat(self, system, history, gen_conf):
+        if "max_tokens" in gen_conf:
+            gen_conf["max_new_tokens"] = gen_conf.pop("max_tokens")
+        if system:
+            self.system = system
+        prompt = "\n".join(
+            [item["role"] + ":" + item["content"] for item in history[-5:]]
+        )
+        ans = ""
+        try:
+            response = self.client.run(
+                self.model_name,
+                input={"system_prompt": self.system, "prompt": prompt, **gen_conf},
+            )
+            ans = "".join(response)
+            return ans, num_tokens_from_string(ans)
+        except Exception as e:
+            return ans + "\n**ERROR**: " + str(e), 0
+
+    def chat_streamly(self, system, history, gen_conf):
+        if "max_tokens" in gen_conf:
+            gen_conf["max_new_tokens"] = gen_conf.pop("max_tokens")
+        if system:
+            self.system = system
+        prompt = "\n".join(
+            [item["role"] + ":" + item["content"] for item in history[-5:]]
+        )
+        ans = ""
+        try:
+            response = self.client.run(
+                self.model_name,
+                input={"system_prompt": self.system, "prompt": prompt, **gen_conf},
+            )
+            for resp in response:
+                ans += resp
+                yield ans
+
+        except Exception as e:
+            yield ans + "\n**ERROR**: " + str(e)
+
+        yield num_tokens_from_string(ans)
+
+
+class HunyuanChat(Base):
+    def __init__(self, key, model_name, base_url=None):
+        from tencentcloud.common import credential
+        from tencentcloud.hunyuan.v20230901 import hunyuan_client
+
+        key = json.loads(key)
+        sid = key.get("hunyuan_sid", "")
+        sk = key.get("hunyuan_sk", "")
+        cred = credential.Credential(sid, sk)
+        self.model_name = model_name
+        self.client = hunyuan_client.HunyuanClient(cred, "")
+
+    def chat(self, system, history, gen_conf):
+        from tencentcloud.hunyuan.v20230901 import models
+        from tencentcloud.common.exception.tencent_cloud_sdk_exception import (
+            TencentCloudSDKException,
+        )
+
+        _gen_conf = {}
+        _history = [{k.capitalize(): v for k, v in item.items() } for item in history]
+        if system:
+            _history.insert(0, {"Role": "system", "Content": system})
+        if "temperature" in gen_conf:
+            _gen_conf["Temperature"] = gen_conf["temperature"]
+        if "top_p" in gen_conf:
+            _gen_conf["TopP"] = gen_conf["top_p"]
+
+        req = models.ChatCompletionsRequest()
+        params = {"Model": self.model_name, "Messages": _history, **_gen_conf}
+        req.from_json_string(json.dumps(params))
+        ans = ""
+        try:
+            response = self.client.ChatCompletions(req)
+            ans = response.Choices[0].Message.Content
+            return ans, response.Usage.TotalTokens
+        except TencentCloudSDKException as e:
+            return ans + "\n**ERROR**: " + str(e), 0
+
+    def chat_streamly(self, system, history, gen_conf):
+        from tencentcloud.hunyuan.v20230901 import models
+        from tencentcloud.common.exception.tencent_cloud_sdk_exception import (
+            TencentCloudSDKException,
+        )
+
+        _gen_conf = {}
+        _history = [{k.capitalize(): v for k, v in item.items() } for item in history]
+        if system:
+            _history.insert(0, {"Role": "system", "Content": system})
+
+        if "temperature" in gen_conf:
+            _gen_conf["Temperature"] = gen_conf["temperature"]
+        if "top_p" in gen_conf:
+            _gen_conf["TopP"] = gen_conf["top_p"]
+        req = models.ChatCompletionsRequest()
+        params = {
+            "Model": self.model_name,
+            "Messages": _history,
+            "Stream": True,
+            **_gen_conf,
+        }
+        req.from_json_string(json.dumps(params))
+        ans = ""
+        total_tokens = 0
+        try:
+            response = self.client.ChatCompletions(req)
+            for resp in response:
+                resp = json.loads(resp["data"])
+                if not resp["Choices"] or not resp["Choices"][0]["Delta"]["Content"]:
+                    continue
+                ans += resp["Choices"][0]["Delta"]["Content"]
+                total_tokens += 1
+
+                yield ans
+
+        except TencentCloudSDKException as e:
+            yield ans + "\n**ERROR**: " + str(e)
+
+        yield total_tokens
+
+
+class SparkChat(Base):
+    def __init__(
+        self, key, model_name, base_url="https://spark-api-open.xf-yun.com/v1"
+    ):
+        if not base_url:
+            base_url = "https://spark-api-open.xf-yun.com/v1"
+        model2version = {
+            "Spark-Max": "generalv3.5",
+            "Spark-Lite": "general",
+            "Spark-Pro": "generalv3",
+            "Spark-Pro-128K": "pro-128k",
+            "Spark-4.0-Ultra": "4.0Ultra",
+        }
+        model_version = model2version[model_name]
+        super().__init__(key, model_version, base_url)
