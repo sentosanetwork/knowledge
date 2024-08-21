@@ -29,10 +29,7 @@ import ast
 def factories():
     try:
         fac = LLMFactoriesService.get_all()
-        # return get_json_result(data=[f.to_dict() for f in fac if f.name not in ["Youdao", "FastEmbed", "BAAI"]])
-        return get_json_result(data=[f.to_dict() for f in fac if f.name not in 
-            ["Youdao", "FastEmbed", "BAAI", "Moonshot", "ZHIPU-AI", "Xinference", "BaiChuan", "cohere", "DeepSeek", "Groq", 
-             "Jina", "Lepton", "LocalAI", "MiniMax", "OpenAI-API-Compatible", "OpenRouter", "StepFun", "VolcEngine", "Tongyi-Qianwen"]])
+        return get_json_result(data=[f.to_dict() for f in fac if f.name not in ["Youdao", "FastEmbed", "BAAI"]])
     except Exception as e:
         return server_error_response(e)
 
@@ -61,12 +58,7 @@ def set_api_key():
             mdl = ChatModel[factory](
                 req["api_key"], llm.llm_name, base_url=req.get("base_url"))
             try:
-                content= [
-                    {
-                        "text": "Hello! How are you doing!"  
-                    }
-                ]
-                m, tc = mdl.chat(None, [{"role": "user", "content": content}], 
+                m, tc = mdl.chat(None, [{"role": "user", "content": "Hello! How are you doing!"}], 
                                  {"temperature": 0.9,'max_tokens':50})
                 if m.find("**ERROR**") >=0:
                     raise Exception(m)
@@ -114,7 +106,7 @@ def set_api_key():
 
 @manager.route('/add_llm', methods=['POST'])
 @login_required
-@validate_request("llm_factory", "llm_name", "model_type")
+@validate_request("llm_factory")
 def add_llm():
     req = request.json
     factory = req["llm_factory"]
@@ -128,6 +120,11 @@ def add_llm():
         api_key = '{' + f'"volc_ak": "{req.get("volc_ak", "")}", ' \
                         f'"volc_sk": "{req.get("volc_sk", "")}", ' \
                         f'"ep_id": "{endpoint_id}", ' + '}'
+    elif factory == "Tencent Hunyuan":
+        api_key = '{' + f'"hunyuan_sid": "{req.get("hunyuan_sid", "")}", ' \
+                        f'"hunyuan_sk": "{req.get("hunyuan_sk", "")}"' + '}'
+        req["api_key"] = api_key
+        return set_api_key()
     elif factory == "Bedrock":
         # For Bedrock, due to its special authentication method
         # Assemble bedrock_ak, bedrock_sk, bedrock_region
@@ -140,10 +137,13 @@ def add_llm():
         api_key = "xxxxxxxxxxxxxxx"
     elif factory == "OpenAI-API-Compatible":
         llm_name = req["llm_name"]+"___OpenAI-API"
-        api_key = req.get("api_key","xxxxxxxxxxxxxxx") 
+        api_key = req.get("api_key","xxxxxxxxxxxxxxx")
+    elif factory =="XunFei Spark":
+        llm_name = req["llm_name"]
+        api_key = req.get("spark_api_password","") 
     else:
         llm_name = req["llm_name"]
-        api_key = "xxxxxxxxxxxxxxx"
+        api_key = req.get("api_key","xxxxxxxxxxxxxxx") 
 
     llm = {
         "tenant_id": current_user.id,
@@ -157,7 +157,7 @@ def add_llm():
     msg = ""
     if llm["model_type"] == LLMType.EMBEDDING.value:
         mdl = EmbeddingModel[factory](
-            key=llm['api_key'] if factory in ["VolcEngine", "Bedrock","OpenAI-API-Compatible"] else None,
+            key=llm['api_key'] if factory in ["VolcEngine", "Bedrock","OpenAI-API-Compatible","Replicate"] else None,
             model_name=llm["llm_name"], 
             base_url=llm["api_base"])
         try:
@@ -168,17 +168,12 @@ def add_llm():
             msg += f"\nFail to access embedding model({llm['llm_name']})." + str(e)
     elif llm["model_type"] == LLMType.CHAT.value:
         mdl = ChatModel[factory](
-            key=llm['api_key'] if factory in ["VolcEngine", "Bedrock","OpenAI-API-Compatible"] else None,
+            key=llm['api_key'] if factory in ["VolcEngine", "Bedrock","OpenAI-API-Compatible","Replicate","XunFei Spark"] else None,
             model_name=llm["llm_name"],
             base_url=llm["api_base"]
         )
         try:
-            content= [
-                {
-                    "text": "Hello! How are you doing!"  
-                }
-            ]
-            m, tc = mdl.chat(None, [{"role": "user", "content": content}], {
+            m, tc = mdl.chat(None, [{"role": "user", "content": "Hello! How are you doing!"}], {
                              "temperature": 0.9})
             if not tc:
                 raise Exception(m)

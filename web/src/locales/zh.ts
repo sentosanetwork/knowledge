@@ -145,6 +145,7 @@ export default {
       rerankTip: `如果是空的。它使用查询和块的嵌入来构成矢量余弦相似性。否则，它使用rerank评分代替矢量余弦相似性。`,
       topK: 'Top-K',
       topKTip: `K块将被送入Rerank型号。`,
+      delimiter: `分段标识符`,
     },
     knowledgeConfiguration: {
       titleDescription: '在这里更新您的知识库详细信息，尤其是解析方法。',
@@ -190,7 +191,7 @@ export default {
       我们假设手册具有分层部分结构。 我们使用最低的部分标题作为对文档进行切片的枢轴。
       因此，同一部分中的图和表不会被分割，并且块大小可能会很大。
       </p>`,
-      naive: `<p>支持的文件格式为<b>DOCX、EXCEL、PPT、IMAGE、PDF、TXT</b>。</p>
+      naive: `<p>支持的文件格式为<b>DOCX、EXCEL、PPT、IMAGE、PDF、TXT、MD、JSON、EML</b>。</p>
       <p>此方法将简单的方法应用于块文件：</p>
       <p>
       <li>系统将使用视觉检测模型将连续文本分割成多个片段。</li>
@@ -260,6 +261,13 @@ export default {
       </p><p>
       如果你要总结的东西需要一篇文章的全部上下文，并且所选LLM的上下文长度覆盖了文档长度，你可以尝试这种方法。
       </p>`,
+      knowledgeGraph: `<p>支持的文件格式为<b>DOCX、EXCEL、PPT、IMAGE、PDF、TXT、MD、JSON、EML</b>
+
+<p>文件分块后，使用分块提取整个文档的知识图谱和思维导图。此方法将简单的方法应用于分块文件：
+连续的文本将被切成大约 512 个 token 数的块。</p>
+<p>接下来，将分块传输到 LLM 以提取知识图谱和思维导图的节点和关系。</p>
+
+注意您需要指定的条目类型。</p>`,
       useRaptor: '使用召回增强RAPTOR策略',
       useRaptorTip: '请参考 https://huggingface.co/papers/2401.18059',
       prompt: '提示词',
@@ -399,8 +407,11 @@ export default {
       fullScreenDescription: '将以下iframe嵌入您的网站处于所需位置',
       partialTitle: '部分嵌入',
       extensionTitle: 'Chrome 插件',
-      tokenError: '请先创建 Api Token!',
+      tokenError: '请先创建 API Token!',
       searching: '搜索中',
+      parsing: '解析中',
+      uploading: '上传中',
+      uploadFailed: '上传失败',
     },
     setting: {
       profile: '概要',
@@ -490,6 +501,13 @@ export default {
       'eu-central-1': '欧洲 (法兰克福)',
       'us-gov-west-1': 'AWS GovCloud (US-West)',
       'ap-southeast-2': '亚太地区 (悉尼)',
+      addHunyuanSID: '混元 Secret ID',
+      HunyuanSIDMessage: '请输入 Secret ID',
+      addHunyuanSK: '混元 Secret Key',
+      HunyuanSKMessage: '请输入 Secret Key',
+      SparkModelNameMessage: '请选择星火模型！',
+      addSparkAPIPassword: '星火 APIPassword',
+      SparkAPIPasswordMessage: '请输入 APIPassword',
     },
     message: {
       registered: '注册成功',
@@ -559,6 +577,8 @@ export default {
       messageMsg: '请输入消息或删除此字段。',
       addField: '新增字段',
       loop: '循环上限',
+      loopTip:
+        'loop为当前组件循环次数上限，当循环次数超过loop的值时，说明组件不能完成当前任务，请重新优化agent',
       yes: '是',
       no: '否',
       key: 'key',
@@ -595,6 +615,7 @@ export default {
       blank: '空',
       createFromNothing: '从无到有',
       addItem: '新增',
+      addSubItem: '新增子项',
       nameRequiredMsg: '名称不能为空',
       nameRepeatedMsg: '名称不能重复',
       keywordExtract: '关键词',
@@ -628,7 +649,7 @@ export default {
       bing: 'Bing',
       bingTip:
         '此组件用于从 https://www.bing.com/ 获取搜索结果。通常，它作为知识库的补充。Top N 和 Bing Subscription-Key 指定您需要调整的搜索结果数量。',
-      apiKey: 'Api Key',
+      apiKey: 'API Key',
       country: '国家',
       language: '语言',
       googleScholar: '谷歌学术',
@@ -759,7 +780,38 @@ export default {
         '15d': '12天',
         '30d': '30天',
       },
-      publish: '发布',
+      publish: 'API',
+      exeSQL: 'ExeSQL',
+      exeSQLDescription:
+        '该组件通过SQL语句从相应的关系数据库中查询结果。支持MySQL，PostgreSQL，MariaDB。',
+      dbType: '数据库类型',
+      database: '数据库',
+      username: '用户名',
+      host: '主机',
+      port: '端口',
+      password: '密码',
+      switch: '条件',
+      logicalOperator: '操作符',
+      switchOperatorOptions: {
+        equal: '等于',
+        notEqual: '不等于',
+        gt: '大于',
+        ge: '大于等于',
+        lt: '小于',
+        le: '小于等于',
+        contains: '包含',
+        notContains: '不包含',
+        startWith: '开始是',
+        endWith: '结束是',
+        empty: '为空',
+        notEmpty: '不为空',
+      },
+      switchLogicOperatorOptions: {
+        and: '与',
+        or: '或',
+      },
+      operator: '操作符',
+      value: '值',
     },
     footer: {
       profile: 'All rights reserved @ React',

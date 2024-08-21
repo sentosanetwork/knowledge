@@ -144,6 +144,7 @@ export default {
       rerankTip: `如果是空的。它使用查詢和塊的嵌入來構成矢量餘弦相似性。否則，它使用rerank評分代替矢量餘弦相似性。`,
       topK: 'Top-K',
       topKTip: `K塊將被送入Rerank型號。`,
+      delimiter: `分段標識符`,
     },
     knowledgeConfiguration: {
       titleDescription: '在這裡更新您的知識庫詳細信息，尤其是解析方法。',
@@ -189,7 +190,7 @@ export default {
         我們假設手冊具有分層部分結構。我們使用最低的部分標題作為對文檔進行切片的樞軸。
         因此，同一部分中的圖和表不會被分割，並且塊大小可能會很大。
         </p>`,
-      naive: `<p>支持的文件格式為<b>DOCX、EXCEL、PPT、IMAGE、PDF、TXT</b>。</p>
+      naive: `<p>支持的文件格式為<b>DOCX、EXCEL、PPT、IMAGE、PDF、TXT、MD、JSON、EML</b>。</p>
         <p>此方法將簡單的方法應用於塊文件：</p>
         <p>
         <li>系統將使用視覺檢測模型將連續文本分割成多個片段。</li>
@@ -243,6 +244,13 @@ export default {
         </p><p>
         如果你要總結的東西需要一篇文章的全部上下文，並且所選LLM的上下文長度覆蓋了文檔長度，你可以嘗試這種方法。
         </p>`,
+      knowledgeGraph: `<p>支援的檔案格式為<b>DOCX、EXCEL、PPT、IMAGE、PDF、TXT、MD、JSON、EML</b>
+
+<p>文件分塊後，使用分塊擷取整個文件的知識圖譜和心智圖。此方法將簡單的方法應用於區塊檔案：
+連續的文字將被分割成多個片段，每個片段大約有 512 個令牌數。
+<p>接下來，區塊將傳送到LLM以提取知識圖譜和思維導圖的節點和關係。
+
+<p>請注意您需要指定的條目類型。</p></p>`,
       useRaptor: '使用RAPTOR文件增強策略',
       useRaptorTip: '請參考 https://huggingface.co/papers/2401.18059',
       prompt: '提示詞',
@@ -370,7 +378,7 @@ export default {
       embedded: '嵌入',
       serviceApiEndpoint: '服務 API 端點',
       apiKey: 'API 鍵',
-      apiReference: 'API 文件',
+      apiReference: 'API 文檔',
       dateRange: '日期範圍：',
       backendServiceApi: '後端服務 API',
       createNewKey: '創建新密鑰',
@@ -382,8 +390,11 @@ export default {
       fullScreenDescription: '將以下iframe嵌入您的網站處於所需位置',
       partialTitle: '部分嵌入',
       extensionTitle: 'Chrome 插件',
-      tokenError: '請先創建 Api Token!',
+      tokenError: '請先創建 API Token!',
       searching: '搜索中',
+      parsing: '解析中',
+      uploading: '上傳中',
+      uploadFailed: '上傳失敗',
     },
     setting: {
       profile: '概述',
@@ -473,6 +484,13 @@ export default {
       'eu-central-1': '歐洲 (法蘭克福)',
       'us-gov-west-1': 'AWS GovCloud (US-West)',
       'ap-southeast-2': '亞太地區 (雪梨)',
+      addHunyuanSID: '混元 Secret ID',
+      HunyuanSIDMessage: '請輸入 Secret ID',
+      addHunyuanSK: '混元 Secret Key',
+      HunyuanSKMessage: '請輸入 Secret Key',
+      SparkModelNameMessage: '請選擇星火模型!',
+      addSparkAPIPassword: '星火 APIPassword',
+      SparkAPIPasswordMessage: '請輸入 APIPassword',
     },
     message: {
       registered: '註冊成功',
@@ -540,6 +558,8 @@ export default {
       messageMsg: '請輸入訊息或刪除此欄位。',
       addField: '新增字段',
       loop: '循環上限',
+      loopTip:
+        'loop為目前元件循環次數上限，當循環次數超過loop的值時，表示元件無法完成目前任務，請重新最佳化agent',
       yes: '是',
       no: '否',
       key: 'key',
@@ -577,6 +597,7 @@ export default {
       blank: '空',
       createFromNothing: '從無到有',
       addItem: '新增',
+      addSubItem: '新增子項',
       nameRequiredMsg: '名稱不能為空',
       nameRepeatedMsg: '名稱不能重複',
       keywordExtract: '關鍵字',
@@ -610,7 +631,7 @@ export default {
       bing: 'Bing',
       bingTip:
         '此元件用於從 https://www.bing.com/ 取得搜尋結果。通常，它充當知識庫的補充。 Top N 和 Bing Subscription-Key 指定您需要適配的搜尋結果數量。',
-      apiKey: 'Api Key',
+      apiKey: 'API Key',
       country: '國家',
       language: '語言',
       googleScholar: '谷歌學術',
@@ -741,7 +762,38 @@ export default {
         '15d': '12天',
         '30d': '30天',
       },
-      publish: '發布',
+      publish: 'API',
+      exeSQL: 'ExeSQL',
+      exeSQLDescription:
+        '此元件透過SQL語句從對應的關聯式資料庫中查詢結果。支援 MySQL、PostgreSQL、MariaDB。 ',
+      dbType: '資料庫類型',
+      database: '資料庫',
+      username: '使用者名稱',
+      host: '主機',
+      port: '端口',
+      password: '密碼',
+      switch: '條件',
+      logicalOperator: '操作符',
+      switchOperatorOptions: {
+        equal: '等於',
+        notEqual: '不等於',
+        gt: '大於',
+        ge: '大於等於',
+        lt: '小於',
+        le: '小於等於',
+        contains: '包含',
+        notContains: '不包含',
+        startWith: '開始是',
+        endWith: '結束是',
+        empty: '為空',
+        notEmpty: '不為空',
+      },
+      switchLogicOperatorOptions: {
+        and: '與',
+        or: '或',
+      },
+      operator: '操作符',
+      value: '值',
     },
     footer: {
       profile: '“保留所有權利 @ react”',

@@ -45,7 +45,7 @@ from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.utils.api_utils import server_error_response, get_data_error_result, validate_request
 from api.utils import get_uuid
 from api.db import FileType, TaskStatus, ParserType, FileSource, LLMType
-from api.db.services.document_service import DocumentService
+from api.db.services.document_service import DocumentService, doc_upload_and_parse
 from api.settings import RetCode, stat_logger
 from api.utils.api_utils import get_json_result
 from rag.utils.minio_conn import MINIO
@@ -75,7 +75,7 @@ def upload():
     if not e:
         raise LookupError("Can't find this knowledgebase!")
 
-    err, _ = FileService.upload_document(kb, file_objs)
+    err, _ = FileService.upload_document(kb, file_objs, current_user.id)
     if err:
         return get_json_result(
             data=False, retmsg="\n".join(err), retcode=RetCode.SERVER_ERROR)
@@ -203,8 +203,16 @@ def list_docs():
         return server_error_response(e)
 
 
+@manager.route('/infos', methods=['POST'])
+def docinfos():
+    req = request.json
+    doc_ids = req["doc_ids"]
+    docs = DocumentService.get_by_ids(doc_ids)
+    return get_json_result(data=list(docs.dicts()))
+
+
 @manager.route('/thumbnails', methods=['GET'])
-@login_required
+#@login_required
 def thumbnails():
     doc_ids = request.args.get("doc_ids").split(",")
     if not doc_ids:
@@ -452,7 +460,6 @@ def get_image(image_id):
 @login_required
 @validate_request("conversation_id")
 def upload_and_parse():
-    req = request.json
     if 'file' not in request.files:
         return get_json_result(
             data=False, retmsg='No file part!', retcode=RetCode.ARGUMENT_ERROR)
@@ -463,116 +470,6 @@ def upload_and_parse():
             return get_json_result(
                 data=False, retmsg='No file selected!', retcode=RetCode.ARGUMENT_ERROR)
 
-    e, conv = ConversationService.get_by_id(req["conversation_id"])
-    if not e:
-        return get_data_error_result(retmsg="Conversation not found!")
-    e, dia = DialogService.get_by_id(conv.dialog_id)
-    kb_id = dia.kb_ids[0]
-    e, kb = KnowledgebaseService.get_by_id(kb_id)
-    if not e:
-        raise LookupError("Can't find this knowledgebase!")
+    doc_ids = doc_upload_and_parse(request.form.get("conversation_id"), file_objs, current_user.id)
 
-    idxnm = search.index_name(kb.tenant_id)
-    if not ELASTICSEARCH.indexExist(idxnm):
-        ELASTICSEARCH.createIdx(idxnm, json.load(
-            open(os.path.join(get_project_base_directory(), "conf", "mapping.json"), "r")))
-
-    embd_mdl = LLMBundle(kb.tenant_id, LLMType.EMBEDDING, llm_name=kb.embd_id, lang=kb.language)
-
-    err, files = FileService.upload_document(kb, file_objs)
-    if err:
-        return get_json_result(
-            data=False, retmsg="\n".join(err), retcode=RetCode.SERVER_ERROR)
-
-    def dummy(prog=None, msg=""):
-        pass
-
-    parser_config = {"chunk_token_num": 4096, "delimiter": "\n!?。；！？", "layout_recognize": False}
-    exe = ThreadPoolExecutor(max_workers=12)
-    threads = []
-    for d, blob in files:
-        kwargs = {
-            "callback": dummy,
-            "parser_config": parser_config,
-            "from_page": 0,
-            "to_page": 100000
-        }
-        threads.append(exe.submit(naive.chunk, d["name"], blob, **kwargs))
-
-    for (docinfo,_), th in zip(files, threads):
-        docs = []
-        doc = {
-            "doc_id": docinfo["id"],
-            "kb_id": [kb.id]
-        }
-        for ck in th.result():
-            d = deepcopy(doc)
-            d.update(ck)
-            md5 = hashlib.md5()
-            md5.update((ck["content_with_weight"] +
-                        str(d["doc_id"])).encode("utf-8"))
-            d["_id"] = md5.hexdigest()
-            d["create_time"] = str(datetime.datetime.now()).replace("T", " ")[:19]
-            d["create_timestamp_flt"] = datetime.datetime.now().timestamp()
-            if not d.get("image"):
-                docs.append(d)
-                continue
-
-            output_buffer = BytesIO()
-            if isinstance(d["image"], bytes):
-                output_buffer = BytesIO(d["image"])
-            else:
-                d["image"].save(output_buffer, format='JPEG')
-
-            MINIO.put(kb.id, d["_id"], output_buffer.getvalue())
-            d["img_id"] = "{}-{}".format(kb.id, d["_id"])
-            del d["image"]
-            docs.append(d)
-
-    parser_ids = {d["id"]: d["parser_id"] for d, _ in files}
-    docids = [d["id"] for d, _ in files]
-    chunk_counts = {id: 0 for id in docids}
-    token_counts = {id: 0 for id in docids}
-    es_bulk_size = 64
-
-    def embedding(doc_id, cnts, batch_size=16):
-        nonlocal embd_mdl, chunk_counts, token_counts
-        vects = []
-        for i in range(0, len(cnts), batch_size):
-            vts, c = embd_mdl.encode(cnts[i: i + batch_size])
-            vects.extend(vts.tolist())
-            chunk_counts[doc_id] += len(cnts[i:i + batch_size])
-            token_counts[doc_id] += c
-        return vects
-
-    _, tenant = TenantService.get_by_id(kb.tenant_id)
-    llm_bdl = LLMBundle(kb.tenant_id, LLMType.CHAT, tenant.llm_id)
-    for doc_id in docids:
-        cks = [c for c in docs if c["doc_id"] == doc_id]
-
-        if parser_ids[doc_id] != ParserType.PICTURE.value:
-            mindmap = MindMapExtractor(llm_bdl)
-            try:
-                mind_map = json.dumps(mindmap([c["content_with_weight"] for c in docs if c["doc_id"] == doc_id]).output, ensure_ascii=False, indent=2)
-                if len(mind_map) < 32: raise Exception("Few content: "+mind_map)
-                cks.append({
-                    "doc_id": doc_id,
-                    "kb_id": [kb.id],
-                    "content_with_weight": mind_map,
-                    "knowledge_graph_kwd": "mind_map"
-                })
-            except Exception as e:
-                stat_logger.error("Mind map generation error:", traceback.format_exc())
-
-        vects = embedding(doc_id, cks)
-        assert len(cks) == len(vects)
-        for i, d in enumerate(cks):
-            v = vects[i]
-            d["q_%d_vec" % len(v)] = v
-        for b in range(0, len(cks), es_bulk_size):
-            ELASTICSEARCH.bulk(cks[b:b + es_bulk_size], idxnm)
-
-        DocumentService.increment_chunk_num(
-            doc_id, kb.id, token_counts[doc_id], chunk_counts[doc_id], 0)
-
-    return get_json_result(data=[d["id"] for d in files])
+    return get_json_result(data=doc_ids)
