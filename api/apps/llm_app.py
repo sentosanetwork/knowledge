@@ -113,13 +113,10 @@ def add_llm():
 
     if factory == "VolcEngine":
         # For VolcEngine, due to its special authentication method
-        # Assemble volc_ak, volc_sk, endpoint_id into api_key
-        temp = list(ast.literal_eval(req["llm_name"]).items())[0]
-        llm_name = temp[0]
-        endpoint_id = temp[1]
-        api_key = '{' + f'"volc_ak": "{req.get("volc_ak", "")}", ' \
-                        f'"volc_sk": "{req.get("volc_sk", "")}", ' \
-                        f'"ep_id": "{endpoint_id}", ' + '}'
+        # Assemble ark_api_key endpoint_id into api_key
+        llm_name = req["llm_name"]
+        api_key = '{' + f'"ark_api_key": "{req.get("ark_api_key", "")}", ' \
+                        f'"ep_id": "{req.get("endpoint_id", "")}", ' + '}'
     elif factory == "Tencent Hunyuan":
         api_key = '{' + f'"hunyuan_sid": "{req.get("hunyuan_sid", "")}", ' \
                         f'"hunyuan_sk": "{req.get("hunyuan_sk", "")}"' + '}'
@@ -140,7 +137,11 @@ def add_llm():
         api_key = req.get("api_key","xxxxxxxxxxxxxxx")
     elif factory =="XunFei Spark":
         llm_name = req["llm_name"]
-        api_key = req.get("spark_api_password","") 
+        api_key = req.get("spark_api_password","xxxxxxxxxxxxxxx") 
+    elif factory == "BaiduYiyan":
+        llm_name = req["llm_name"]
+        api_key = '{' + f'"yiyan_ak": "{req.get("yiyan_ak", "")}", ' \
+                f'"yiyan_sk": "{req.get("yiyan_sk", "")}"' + '}'
     else:
         llm_name = req["llm_name"]
         api_key = req.get("api_key","xxxxxxxxxxxxxxx") 
@@ -157,7 +158,7 @@ def add_llm():
     msg = ""
     if llm["model_type"] == LLMType.EMBEDDING.value:
         mdl = EmbeddingModel[factory](
-            key=llm['api_key'] if factory in ["VolcEngine", "Bedrock","OpenAI-API-Compatible","Replicate"] else None,
+            key=llm['api_key'],
             model_name=llm["llm_name"], 
             base_url=llm["api_base"])
         try:
@@ -168,7 +169,7 @@ def add_llm():
             msg += f"\nFail to access embedding model({llm['llm_name']})." + str(e)
     elif llm["model_type"] == LLMType.CHAT.value:
         mdl = ChatModel[factory](
-            key=llm['api_key'] if factory in ["VolcEngine", "Bedrock","OpenAI-API-Compatible","Replicate","XunFei Spark"] else None,
+            key=llm['api_key'],
             model_name=llm["llm_name"],
             base_url=llm["api_base"]
         )
@@ -182,7 +183,9 @@ def add_llm():
                 e)
     elif llm["model_type"] == LLMType.RERANK:
         mdl = RerankModel[factory](
-            key=None, model_name=llm["llm_name"], base_url=llm["api_base"]
+            key=llm["api_key"], 
+            model_name=llm["llm_name"], 
+            base_url=llm["api_base"]
         )
         try:
             arr, tc = mdl.similarity("Hello~ Ragflower!", ["Hi, there!"])
@@ -193,7 +196,9 @@ def add_llm():
                 e)
     elif llm["model_type"] == LLMType.IMAGE2TEXT.value:
         mdl = CvModel[factory](
-            key=llm["api_key"] if factory in ["OpenAI-API-Compatible"] else None, model_name=llm["llm_name"], base_url=llm["api_base"]
+            key=llm["api_key"], 
+            model_name=llm["llm_name"], 
+            base_url=llm["api_base"]
         )
         try:
             img_url = (

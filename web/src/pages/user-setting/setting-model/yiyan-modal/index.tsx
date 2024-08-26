@@ -1,20 +1,18 @@
 import { useTranslate } from '@/hooks/common-hooks';
 import { IModalProps } from '@/interfaces/common';
 import { IAddLlmRequestBody } from '@/interfaces/request/llm';
-import { Flex, Form, Input, Modal, Select, Space, Switch } from 'antd';
+import { Form, Input, Modal, Select } from 'antd';
 import omit from 'lodash/omit';
 
 type FieldType = IAddLlmRequestBody & {
   vision: boolean;
-  volc_ak: string;
-  volc_sk: string;
-  endpoint_id: string;
-  ark_api_key: string;
+  yiyan_ak: string;
+  yiyan_sk: string;
 };
 
 const { Option } = Select;
 
-const VolcEngineModal = ({
+const YiyanModal = ({
   visible,
   hideModal,
   onOk,
@@ -49,20 +47,7 @@ const VolcEngineModal = ({
       onOk={handleOk}
       onCancel={hideModal}
       okButtonProps={{ loading }}
-      footer={(originNode: React.ReactNode) => {
-        return (
-          <Flex justify={'space-between'}>
-            <a
-              href="https://www.volcengine.com/docs/82379/1302008"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t('ollamaLink', { name: llmFactory })}
-            </a>
-            <Space>{originNode}</Space>
-          </Flex>
-        );
-      }}
+      confirmLoading={loading}
     >
       <Form
         name="basic"
@@ -80,45 +65,33 @@ const VolcEngineModal = ({
           <Select placeholder={t('modelTypeMessage')}>
             <Option value="chat">chat</Option>
             <Option value="embedding">embedding</Option>
+            <Option value="rerank">rerank</Option>
           </Select>
         </Form.Item>
         <Form.Item<FieldType>
           label={t('modelName')}
           name="llm_name"
-          rules={[{ required: true, message: t('volcModelNameMessage') }]}
+          rules={[{ required: true, message: t('yiyanModelNameMessage') }]}
         >
-          <Input placeholder={t('volcModelNameMessage')} />
+          <Input placeholder={t('yiyanModelNameMessage')} />
         </Form.Item>
         <Form.Item<FieldType>
-          label={t('addEndpointID')}
-          name="endpoint_id"
-          rules={[{ required: true, message: t('endpointIDMessage') }]}
+          label={t('addyiyanAK')}
+          name="yiyan_ak"
+          rules={[{ required: true, message: t('yiyanAKMessage') }]}
         >
-          <Input placeholder={t('endpointIDMessage')} />
+          <Input placeholder={t('yiyanAKMessage')} />
         </Form.Item>
         <Form.Item<FieldType>
-          label={t('addArkApiKey')}
-          name="ark_api_key"
-          rules={[{ required: true, message: t('ArkApiKeyMessage') }]}
+          label={t('addyiyanSK')}
+          name="yiyan_sk"
+          rules={[{ required: true, message: t('yiyanSKMessage') }]}
         >
-          <Input placeholder={t('ArkApiKeyMessage')} />
-        </Form.Item>
-        <Form.Item noStyle dependencies={['model_type']}>
-          {({ getFieldValue }) =>
-            getFieldValue('model_type') === 'chat' && (
-              <Form.Item
-                label={t('vision')}
-                valuePropName="checked"
-                name={'vision'}
-              >
-                <Switch />
-              </Form.Item>
-            )
-          }
+          <Input placeholder={t('yiyanSKMessage')} />
         </Form.Item>
       </Form>
     </Modal>
   );
 };
 
-export default VolcEngineModal;
+export default YiyanModal;
