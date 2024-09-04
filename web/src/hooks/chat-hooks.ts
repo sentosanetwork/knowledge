@@ -4,18 +4,18 @@ import {
   IDialog,
   IStats,
   IToken,
-  Message,
 } from '@/interfaces/database/chat';
+import { IFeedbackRequestBody } from '@/interfaces/request/chat';
 import i18n from '@/locales/config';
-import { IClientConversation, IMessage } from '@/pages/chat/interface';
+import { IClientConversation } from '@/pages/chat/interface';
 import chatService from '@/services/chat-service';
-import { isConversationIdExist } from '@/utils/chat';
+import { buildMessageListWithUuid, isConversationIdExist } from '@/utils/chat';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { message } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
+import { set } from 'lodash';
 import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'umi';
-import { v4 as uuid } from 'uuid';
 
 //#region logic
 
@@ -215,11 +215,7 @@ export const useFetchNextConversation = () => {
         // }
         const conversation = data?.data ?? {};
 
-        const messageList =
-          conversation?.message?.map((x: Message | IMessage) => ({
-            ...x,
-            id: 'id' in x && x.id ? x.id : uuid(),
-          })) ?? [];
+        const messageList = buildMessageListWithUuid(conversation?.message);
 
         return { ...conversation, message: messageList };
       }
@@ -292,6 +288,57 @@ export const useRemoveNextConversation = () => {
 
   return { data, loading, removeConversation: mutateAsync };
 };
+
+export const useDeleteMessage = () => {
+  const { conversationId } = useGetChatSearchParams();
+
+  const {
+    data,
+    isPending: loading,
+    mutateAsync,
+  } = useMutation({
+    mutationKey: ['deleteMessage'],
+    mutationFn: async (messageId: string) => {
+      const { data } = await chatService.deleteMessage({
+        messageId,
+        conversationId,
+      });
+
+      if (data.retcode === 0) {
+        message.success(i18n.t(`message.deleted`));
+      }
+
+      return data.retcode;
+    },
+  });
+
+  return { data, loading, deleteMessage: mutateAsync };
+};
+
+export const useFeedback = () => {
+  const { conversationId } = useGetChatSearchParams();
+
+  const {
+    data,
+    isPending: loading,
+    mutateAsync,
+  } = useMutation({
+    mutationKey: ['feedback'],
+    mutationFn: async (params: IFeedbackRequestBody) => {
+      const { data } = await chatService.thumbup({
+        ...params,
+        conversationId,
+      });
+      if (data.retcode === 0) {
+        message.success(i18n.t(`message.operated`));
+      }
+      return data.retcode;
+    },
+  });
+
+  return { data, loading, feedback: mutateAsync };
+};
+
 //#endregion
 
 // #region API provided for external calls
@@ -408,24 +455,25 @@ export const useCreateNextSharedConversation = () => {
   return { data, loading, createSharedConversation: mutateAsync };
 };
 
-export const useFetchNextSharedConversation = () => {
-  const {
-    data,
-    isPending: loading,
-    mutateAsync,
-  } = useMutation({
-    mutationKey: ['fetchSharedConversation'],
-    mutationFn: async (conversationId: string) => {
+export const useFetchNextSharedConversation = (conversationId: string) => {
+  const { data, isPending: loading } = useQuery({
+    queryKey: ['fetchSharedConversation'],
+    enabled: !!conversationId,
+    queryFn: async () => {
       const { data } = await chatService.getExternalConversation(
         null,
         conversationId,
       );
 
+      const messageList = buildMessageListWithUuid(data?.data?.message);
+
+      set(data, 'data.message', messageList);
+
       return data;
     },
   });
 
-  return { data, loading, fetchConversation: mutateAsync };
+  return { data, loading };
 };
 
 //#endregion
