@@ -102,7 +102,7 @@ const AssistantSetting = ({ show }: ISegmentedContentProps) => {
       >
         <Switch />
       </Form.Item>
-      <Form.Item
+      {/* <Form.Item
         label={t('tts')}
         valuePropName="checked"
         name={['prompt_config', 'tts']}
@@ -110,7 +110,7 @@ const AssistantSetting = ({ show }: ISegmentedContentProps) => {
         initialValue={false}
       >
         <Switch />
-      </Form.Item>
+      </Form.Item> */}
       <KnowledgeBaseItem></KnowledgeBaseItem>
     </section>
   );
